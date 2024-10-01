@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Tarefas Corporativa</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+
+        #todo-form,
+        #filter-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #todo-form input,
+        #todo-form select,
+        #filter-form select {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            flex-grow: 1;
+        }
+
+        #add-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        #add-button:hover {
+            background-color: #2980b9;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .priority-high {
+            color: #e74c3c;
+        }
+
+        .priority-medium {
+            color: #f39c12;
+        }
+
+        .priority-low {
+            color: #2ecc71;
+        }
+
+        .completed {
+            text-decoration: line-through;
+            color: #7f8c8d;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        .action-buttons button {
+            padding: 5px 10px;
+            font-size: 14px;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .edit-btn {
+            background-color: #3498db;
+        }
+
+        .delete-btn {
+            background-color: #e74c3c;
+        }
+
+        .complete-btn {
+            background-color: #2ecc71;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Lista de Tarefas Corporativa</h1>
+    <form id="todo-form">
+        <input type="text" id="todo-input" placeholder="Título da tarefa" required>
+        <input type="text" id="todo-description" placeholder="Descrição">
+        <select id="todo-category">
+            <option value="">Selecione uma categoria</option>
+            <option value="Trabalho">Trabalho</option>
+            <option value="Pessoal">Pessoal</option>
+            <option value="Projeto">Projeto</option>
+        </select>
+        <select id="todo-priority">
+            <option value="">Selecione a prioridade</option>
+            <option value="Baixa">Baixa</option>
+            <option value="Média">Média</option>
+            <option value="Alta">Alta</option>
+        </select>
+        <input type="date" id="todo-due-date">
+        <button type="submit" id="add-button">Adicionar Tarefa</button>
+    </form>
+    <form id="filter-form">
+        <select id="filter-category">
+            <option value="">Todas as categorias</option>
+            <option value="Trabalho">Trabalho</option>
+            <option value="Pessoal">Pessoal</option>
+            <option value="Projeto">Projeto</option>
+        </select>
+        <select id="filter-priority">
+            <option value="">Todas as prioridades</option>
+            <option value="Baixa">Baixa</option>
+            <option value="Média">Média</option>
+            <option value="Alta">Alta</option>
+        </select>
+        <select id="filter-status">
+            <option value="">Todos os status</option>
+            <option value="pending">Pendentes</option>
+            <option value="completed">Concluídas</option>
+        </select>
+    </form>
+    <table id="todo-table">
+        <thead>
+            <tr>
+                <th>Título</th>
+                <th>Descrição</th>
+                <th>Categoria</th>
+                <th>Prioridade</th>
+                <th>Data de Vencimento</th>
+                <th>Status</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="todo-list"></tbody>
+    </table>
+
+    <script>
+        const todoForm = document.getElementById('todo-form');
+        const todoInput = document.getElementById('todo-input');
+        const todoDescription = document.getElementById('todo-description');
+        const todoCategory = document.getElementById('todo-category');
+        const todoPriority = document.getElementById('todo-priority');
+        const todoDueDate = document.getElementById('todo-due-date');
+        const todoList = document.getElementById('todo-list');
+        const filterCategory = document.getElementById('filter-category');
+        const filterPriority = document.getElementById('filter-priority');
+        const filterStatus = document.getElementById('filter-status');
+
+        let todos = JSON.parse(localStorage.getItem('todos')) || [];
+
+        function renderTodos() {
+            const filteredTodos = todos.filter(todo =>
+                (filterCategory.value === '' || todo.category === filterCategory.value) &&
+                (filterPriority.value === '' || todo.priority === filterPriority.value) &&
+                (filterStatus.value === '' ||
+                    (filterStatus.value === 'completed' && todo.completed) ||
+                    (filterStatus.value === 'pending' && !todo.completed))
+            );
+
+            todoList.innerHTML = '';
+            filteredTodos.forEach((todo, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="${todo.completed ? 'completed' : ''}">${todo.title}</td>
+                    <td>${todo.description}</td>
+                    <td>${todo.category}</td>
+                    <td class="priority-${todo.priority.toLowerCase()}">${todo.priority}</td>
+                    <td>${todo.dueDate}</td>
+                    <td>${todo.completed ? 'Concluída' : 'Pendente'}</td>
+                    <td class="action-buttons">
+                        <button class="edit-btn" onclick="editTodo(${index})">Editar</button>
+                        <button class="delete-btn" onclick="removeTodo(${index})">Remover</button>
+                        <button class="complete-btn" onclick="toggleTodo(${index})">${todo.completed ? 'Desfazer' : 'Concluir'}</button>
+                    </td>
+                `;
+                todoList.appendChild(tr);
+            });
+        }
+
+        function addTodo(title, description, category, priority, dueDate) {
+            todos.push({ title, description, category, priority, dueDate, completed: false });
+            saveTodos();
+            renderTodos();
+        }
+
+        function editTodo(index) {
+            const todo = todos[index];
+            todoInput.value = todo.title;
+            todoDescription.value = todo.description;
+            todoCategory.value = todo.category;
+            todoPriority.value = todo.priority;
+            todoDueDate.value = todo.dueDate;
+            todos.splice(index, 1);
+            saveTodos();
+            renderTodos();
+        }
+
+        function toggleTodo(index) {
+            todos[index].completed = !todos[index].completed;
+            saveTodos();
+            renderTodos();
+        }
+
+        function removeTodo(index) {
+            todos.splice(index, 1);
+            saveTodos();
+            renderTodos();
+        }
+
+        function saveTodos() {
+            localStorage.setItem('todos', JSON.stringify(todos));
+        }
+
+        todoForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const title = todoInput.value.trim();
+            const description = todoDescription.value.trim();
+            const category = todoCategory.value;
+            const priority = todoPriority.value;
+            const dueDate = todoDueDate.value;
+            if (title) {
+                addTodo(title, description, category, priority, dueDate);
+                todoForm.reset();
+            }
+        });
+
+        filterCategory.addEventListener('change', renderTodos);
+        filterPriority.addEventListener('change', renderTodos);
+        filterStatus.addEventListener('change', renderTodos);
+
+        renderTodos();
+    </script>
+</body>
+
+</html>
